@@ -127,17 +127,18 @@ op_binary_relational:
 	| OP_MOREOREQUAL;
 op_binary_string: OP_CONCAT;
 
-expr: expr_unary | expr_binary | operand;
-expr_unary:;
-expr_binary:;
-operand:
-	IDENTIFIER
-	| NUMBER
-	| BOOL
-	| STRING
-	| SB_LEFTBRACKET expr SB_RIGHTBRACKET
-	// | expr
-	| expr_func;
+expr:
+	SB_LEFTBRACKET expr SB_RIGHTBRACKET
+	| IDENTIFIER expr_element // index
+	| <assoc = right> OP_MINUS expr // sign
+	| <assoc = right> OP_NOT expr // not
+	| expr op_binary_multiplying operand // * / %
+	| expr op_binary_adding operand // + -
+	| expr op_binary_logical operand // and or
+	| expr op_binary_relational expr // = == != < > <= >=
+	| expr op_binary_string expr // ...
+	| operand;
+operand: IDENTIFIER | NUMBER | BOOL | STRING | expr_func;
 
 func:
 	KW_FUNC IDENTIFIER SB_LEFTBRACKET paramLst SB_RIGHTBRACKET;
