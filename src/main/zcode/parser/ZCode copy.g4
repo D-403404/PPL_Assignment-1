@@ -16,7 +16,7 @@ program:;
 
 COMMENT: '##' ~[\r\n] -> skip;
 WS:
-	[ \t\b\f]+ -> skip; // skip spaces, tabs, backspaces, form feeds
+	[ \t\b\f\r\n]+ -> skip; // skip spaces, tabs, backspaces, form feeds, carriage returns, newlines
 
 //=====SYMBOLS=====
 SB_LEFTBRACKET: '(';
@@ -68,14 +68,6 @@ OP_NOT: 'not';
 OP_AND: 'and';
 OP_OR: 'or';
 
-// //=====ADDITIONAL I/O FUNCTIONS=====
-// FN_READNUM: 'readNumber';
-// FN_WRITENUM: 'writeNumber';
-// FN_READBOOL: 'readBool';
-// FN_WRITEBOOL: 'write';
-// FN_READSTRING: 'readString';
-// FN_WRITESTRING: 'writeString';
-
 //=====LITERALS=====
 IDENTIFIER: [A-Za-z_] [A-Za-z_0-9]*;
 NUMBER: IntPart DecPart? ExpPart?;
@@ -84,7 +76,7 @@ fragment IntPart: Digit+;
 fragment DecPart: '.' Digit*;
 fragment ExpPart: [Ee] [+-]? Digit+;
 BOOL: KW_TRUE | KW_FALSE;
-STRING: '"' StringContent '"' {self.text = ''.join(self.text.rsplit('"', 1)).replace('"', '', 1)};
+STRING: '"' StringContent '"';
 fragment StringContent: (
 		~('"' | '\\' | [\r\n])
 		| EscSequence
@@ -99,15 +91,25 @@ fragment EscSequence:
 	| '\\\''
 	| '\\\\';
 
+arrayValue: SB_LEFTSQUARE expr_arrayValue SB_RIGHTSQUARE;
+expr_arrayValue:
+	| NUMBER (SB_COMMA NUMBER)*
+	| BOOL (SB_COMMA BOOL)*
+	| STRING (SB_COMMA STRING)*
+	| arrayValue (SB_COMMA arrayValue)*;
+array_assign: (KW_NUMBER | KW_BOOL | KW_STRING) arrayId '<-' arrayValue SB_NEWLINE;
+
 //=====EXPRESSIONS=====
 // ===Array===
 arrayId: IDENTIFIER expr_element;
 expr_element: SB_LEFTSQUARE op_index SB_RIGHTSQUARE;
 // op_index: expr | expr SB_COMMA op_index;
 op_index: expr_arithmetic | expr_arithmetic SB_COMMA op_index;
-// arrayValue: SB_LEFTSQUARE expr_arrayValue SB_RIGHTSQUARE; expr_arrayValue: | NUMBER (SB_COMMA
-// NUMBER)* | BOOL (SB_COMMA BOOL)* | STRING (SB_COMMA STRING)* | arrayValue (SB_COMMA arrayValue)*;
-// array_assign: (KW_NUMBER | KW_BOOL | KW_STRING) arrayId OP_ASSIGN arrayValue SB_NEWLINE;
+
+//===Function call===
+expr_func: IDENTIFIER SB_LEFTBRACKET argLst SB_RIGHTBRACKET;
+argLst: | expr argLstTail;
+argLstTail: | SB_COMMA expr argLstTail;
 
 //Precedence: high to low
 op_unary_index: expr_element;
@@ -131,7 +133,7 @@ op_binary_string: OP_CONCAT;
 // expr op_binary_adding expr // + - | expr op_binary_logical expr // and or | expr
 // op_binary_relational expr // = == != < > <= >= | (operand | SB_LEFTBRACKET expr SB_RIGHTBRACKET)
 // op_binary_string (operand | SB_LEFTBRACKET expr SB_RIGHTBRACKET) // ... | operand; operand:
-// IDENTIFIER | NUMBER | BOOL | STRING | stmt_func_call;
+// IDENTIFIER | NUMBER | BOOL | STRING | expr_func;
 expr:
 	SB_LEFTBRACKET expr SB_RIGHTBRACKET
 	| op_unary_index // index
@@ -173,64 +175,25 @@ expr_string:
 		| operand_string
 	)
 	| operand_string;
-operand: IDENTIFIER | NUMBER | BOOL | STRING | stmt_func_call;
-operand_arithmetic: IDENTIFIER | NUMBER | stmt_func_call;
+operand: IDENTIFIER | NUMBER | BOOL | STRING | expr_func;
+operand_arithmetic: IDENTIFIER | NUMBER | expr_func;
 operand_logical:
 	expr_relational
 	| IDENTIFIER
 	| BOOL
-	| stmt_func_call;
+	| expr_func;
 operand_relational:
 	(expr_arithmetic | expr_string)
 	| IDENTIFIER
 	| NUMBER
 	| STRING
-	| stmt_func_call;
-operand_string: IDENTIFIER | STRING | stmt_func_call;
+	| expr_func;
+operand_string: IDENTIFIER | STRING | expr_func;
 
-//=====VARIABLES=====
-stmt_var_declaration: (
-		KW_NUMBER
-		| KW_BOOL
-		| KW_STRING
-		| KW_VAR
-		| KW_DYNAMIC
-	) IDENTIFIER arrayId value_init?;
-stmt_array_declaration: (KW_NUMBER | KW_BOOL | KW_STRING) arrayId value_init?;
-value_init: OP_ASSIGN expr;
-
-stmt_func_declaration:
-	KW_FUNC IDENTIFIER SB_LEFTBRACKET paramLst? SB_RIGHTBRACKET SB_NEWLINE func_body?;
-paramLst: IDENTIFIER (SB_COMMA IDENTIFIER)*;
-func_body: stmt_return | stmt_block;
-
-//=====STATEMENTS=====
-statement: (stmt_var_declaration | stmt_array_declaration | stmt_func_declaration | stmt_assignment | stmt_if | stmt_for | stmt_break | stmt_continue | stmt_return | stmt_func_call | stmt_block)? SB_NEWLINE;
-
-//===Assignment===
-stmt_assignment: assignment_lhs OP_ASSIGN expr;
-assignment_lhs: IDENTIFIER | arrayId;
-
-//===If statement===
-if_statement: KW_IF (expr_logical | expr_relational) SB_NEWLINE? statement;
-elif_statement: KW_ELIF (expr_logical | expr_relational) SB_NEWLINE? statement;
-else_statement: KW_ELSE (expr_logical | expr_relational) SB_NEWLINE? statement;
-stmt_if: if_statement SB_NEWLINE? (elif_statement SB_NEWLINE?)* else_statement?;
-
-//===For statement===
-stmt_for: KW_FOR IDENTIFIER KW_UNTIL (expr_logical | expr_relational) KW_BY expr_arithmetic SB_NEWLINE? statement;
-
-stmt_break: KW_BREAK;
-stmt_continue: KW_CONTINUE;
-stmt_return: KW_RETURN expr? SB_SEMICOLON?;
-
-//===Function call statement===
-stmt_func_call: IDENTIFIER SB_LEFTBRACKET argLst? SB_RIGHTBRACKET;
-argLst: expr (SB_COMMA expr)*;
-
-//===Block statement===
-stmt_block: KW_BEGIN SB_NEWLINE statement* KW_END;
-
+func:
+	KW_FUNC IDENTIFIER SB_LEFTBRACKET paramLst SB_RIGHTBRACKET;
+paramLst: | IDENTIFIER paramLstTail;
+paramLstTail: | SB_COMMA IDENTIFIER paramLstTail;
 
 ERROR_CHAR: . {raise ErrorToken(self.text)};
 UNCLOSE_STRING: .;
