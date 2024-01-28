@@ -9,6 +9,6 @@ Current problem:
 - cannot enforce non-associativity      => solved, partially
 
     =====ASSIGNMENT 1=====
-DONE: 2, 3, 4, 5, 6, 7
-NEXT: python run.py test LexerSuite and python run.py test ParserSuite
+DONE: 2, 3, 4, 5, 6, 7, python run.py test ParserSuite, python run.py test LexerSuite (LexerSuite got a result error, fixed)
+NEXT: fix stmt_var_declaration rule and expr rule
 SKIP: 2, 8, 9

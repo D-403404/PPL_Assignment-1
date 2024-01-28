@@ -10,13 +10,14 @@ options {
 	language = Python3;
 }
 
-program:;
+program: statementLst EOF;
+statementLst: | statement statementLstTail;
+statementLstTail: | statement statementLstTail;
 
 // IDENTIFIER: [a-z] [a-z0-9]*;
 
-COMMENT: '##' ~[\r\n] -> skip;
-WS:
-	[ \t\b\f]+ -> skip; // skip spaces, tabs, backspaces, form feeds
+COMMENT: '##' .*? SB_NEWLINE -> skip;
+WS: [ \t\b]+ -> skip; // skip spaces, tabs, backspaces
 
 //=====SYMBOLS=====
 SB_LEFTBRACKET: '(';
@@ -26,7 +27,7 @@ SB_RIGHTSQUARE: ']';
 SB_DOT: '.';
 SB_COMMA: ',';
 SB_SEMICOLON: ';';
-SB_NEWLINE: [\r\n];
+SB_NEWLINE: [\f\r\n];
 
 //=====KEYWORDS=====
 fragment KW_TRUE: 'true';
@@ -68,13 +69,9 @@ OP_NOT: 'not';
 OP_AND: 'and';
 OP_OR: 'or';
 
-// //=====ADDITIONAL I/O FUNCTIONS=====
-// FN_READNUM: 'readNumber';
-// FN_WRITENUM: 'writeNumber';
-// FN_READBOOL: 'readBool';
-// FN_WRITEBOOL: 'write';
-// FN_READSTRING: 'readString';
-// FN_WRITESTRING: 'writeString';
+// //=====ADDITIONAL I/O FUNCTIONS===== FN_READNUM: 'readNumber'; FN_WRITENUM: 'writeNumber';
+// FN_READBOOL: 'readBool'; FN_WRITEBOOL: 'write'; FN_READSTRING: 'readString'; FN_WRITESTRING:
+// 'writeString';
 
 //=====LITERALS=====
 IDENTIFIER: [A-Za-z_] [A-Za-z_0-9]*;
@@ -84,17 +81,15 @@ fragment IntPart: Digit+;
 fragment DecPart: '.' Digit*;
 fragment ExpPart: [Ee] [+-]? Digit+;
 BOOL: KW_TRUE | KW_FALSE;
-STRING: '"' StringContent '"' {self.text = ''.join(self.text.rsplit('"', 1)).replace('"', '', 1)};
+STRING:
+	'"' StringContent '"' {self.text = self.text[1:len(self.text)-1]};
 fragment StringContent: (
-		~('"' | '\\' | [\r\n])
+		~('"' | [\f\r\n\\])
 		| EscSequence
 		| '\'' '"'
 	)*;
 fragment EscSequence:
 	'\\b'
-	| '\\f'
-	| '\\r'
-	| '\\n'
 	| '\\t'
 	| '\\\''
 	| '\\\\';
@@ -195,43 +190,62 @@ stmt_var_declaration: (
 		| KW_STRING
 		| KW_VAR
 		| KW_DYNAMIC
-	) IDENTIFIER arrayId value_init?;
+	) IDENTIFIER value_init?;
 stmt_array_declaration: (KW_NUMBER | KW_BOOL | KW_STRING) arrayId value_init?;
 value_init: OP_ASSIGN expr;
 
 stmt_func_declaration:
-	KW_FUNC IDENTIFIER SB_LEFTBRACKET paramLst? SB_RIGHTBRACKET SB_NEWLINE func_body?;
-paramLst: IDENTIFIER (SB_COMMA IDENTIFIER)*;
+	KW_FUNC IDENTIFIER SB_LEFTBRACKET paramLst? SB_RIGHTBRACKET SB_NEWLINE* func_body?;
+paramLst: (KW_NUMBER | KW_BOOL | KW_STRING) IDENTIFIER (
+		SB_COMMA (KW_NUMBER | KW_BOOL | KW_STRING) IDENTIFIER
+	)*;
 func_body: stmt_return | stmt_block;
 
 //=====STATEMENTS=====
-statement: (stmt_var_declaration | stmt_array_declaration | stmt_func_declaration | stmt_assignment | stmt_if | stmt_for | stmt_break | stmt_continue | stmt_return | stmt_func_call | stmt_block)? SB_NEWLINE;
+statement: (
+		stmt_var_declaration
+		| stmt_array_declaration
+		| stmt_func_declaration
+		| stmt_assignment
+		| stmt_if
+		| stmt_for
+		| stmt_break
+		| stmt_continue
+		| stmt_return
+		| stmt_func_call
+		| stmt_block
+	)? SB_NEWLINE+;
 
 //===Assignment===
-stmt_assignment: assignment_lhs OP_ASSIGN expr;
+stmt_assignment: assignment_lhs value_init;
 assignment_lhs: IDENTIFIER | arrayId;
 
 //===If statement===
-if_statement: KW_IF (expr_logical | expr_relational) SB_NEWLINE? statement;
-elif_statement: KW_ELIF (expr_logical | expr_relational) SB_NEWLINE? statement;
-else_statement: KW_ELSE (expr_logical | expr_relational) SB_NEWLINE? statement;
-stmt_if: if_statement SB_NEWLINE? (elif_statement SB_NEWLINE?)* else_statement?;
+if_statement:
+	KW_IF SB_LEFTBRACKET (expr_logical | expr_relational) SB_RIGHTBRACKET SB_NEWLINE* statement;
+elif_statement:
+	KW_ELIF SB_LEFTBRACKET (expr_logical | expr_relational) SB_RIGHTBRACKET SB_NEWLINE* statement;
+else_statement: KW_ELSE SB_NEWLINE* statement;
+stmt_if:
+	if_statement SB_NEWLINE* (elif_statement SB_NEWLINE*)* else_statement?;
 
 //===For statement===
-stmt_for: KW_FOR IDENTIFIER KW_UNTIL (expr_logical | expr_relational) KW_BY expr_arithmetic SB_NEWLINE? statement;
+stmt_for:
+	KW_FOR IDENTIFIER KW_UNTIL (expr_logical | expr_relational) KW_BY expr_arithmetic SB_NEWLINE*
+		statement;
 
 stmt_break: KW_BREAK;
 stmt_continue: KW_CONTINUE;
-stmt_return: KW_RETURN expr? SB_SEMICOLON?;
+stmt_return: KW_RETURN expr?;
 
 //===Function call statement===
-stmt_func_call: IDENTIFIER SB_LEFTBRACKET argLst? SB_RIGHTBRACKET;
+stmt_func_call:
+	IDENTIFIER SB_LEFTBRACKET argLst? SB_RIGHTBRACKET;
 argLst: expr (SB_COMMA expr)*;
 
 //===Block statement===
-stmt_block: KW_BEGIN SB_NEWLINE statement* KW_END;
-
+stmt_block: KW_BEGIN SB_NEWLINE+ statement* KW_END;
 
 ERROR_CHAR: . {raise ErrorToken(self.text)};
-UNCLOSE_STRING: .;
-ILLEGAL_ESCAPE: .;
+UNCLOSE_STRING: '"' StringContent {self.text = self.text[1:]; raise UncloseString(self.text)};
+ILLEGAL_ESCAPE: '"' (~('"' | [\f\r\n\\]) | EscSequence | '\'' '"')* ('\\' ~[bfrnt'\\]) {self.text = self.text[1:]; raise IllegalEscape(self.text)};
