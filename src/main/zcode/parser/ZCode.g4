@@ -10,14 +10,25 @@ options {
 	language = Python3;
 }
 
-program: statementLst EOF;
-statementLst: | statement statementLstTail;
-statementLstTail: | statement statementLstTail;
+// Nếu để như vầy thì báo lỗi khác, tính col theo input raw bên ParserSuite
+// (đọc chuỗi newline từ input raw trc)
+// program: newlineLst_0 declarationLst EOF;
+// declarationLst: stmt_declaration declarationLst | stmt_declaration;
+
+// Nếu để như vầy thì báo lỗi khác, tính col theo file txt bên testcases
+// (đọc nguyên 1 cái input, sau đó render r mới báo lỗi)
+program: declarationLst EOF;
+declarationLst: newlineLst_0 stmt_declaration declarationLst | newlineLst_0 stmt_declaration;
 
 // IDENTIFIER: [a-z] [a-z0-9]*;
 
-COMMENT: '##' .*? SB_NEWLINE -> skip;
-WS: [ \t\b]+ -> skip; // skip spaces, tabs, backspaces
+newlineLst_0: SB_NEWLINE newlineLst_0 | ;
+newlineLst_1: SB_NEWLINE newlineLst_1 | SB_NEWLINE;
+
+// COMMENT: '##' .*? (SB_NEWLINE | EOF) -> skip;
+COMMENT: '##' ~('\n')* -> skip;
+WS: [ \t\b\f\r]+ -> skip; // skip spaces, tabs, backspaces, form feeds, carriage returns
+WS2: (' ' | '\\t' | '\\b' | '\\f' | '\\r')+ -> skip;
 
 //=====SYMBOLS=====
 SB_LEFTBRACKET: '(';
@@ -27,7 +38,7 @@ SB_RIGHTSQUARE: ']';
 SB_DOT: '.';
 SB_COMMA: ',';
 SB_SEMICOLON: ';';
-SB_NEWLINE: [\f\r\n];
+SB_NEWLINE: '\n' | '\\n';
 
 //=====KEYWORDS=====
 fragment KW_TRUE: 'true';
@@ -84,25 +95,27 @@ BOOL: KW_TRUE | KW_FALSE;
 STRING:
 	'"' StringContent '"' {self.text = self.text[1:len(self.text)-1]};
 fragment StringContent: (
-		~('"' | [\f\r\n\\])
+		~('"' | '\\' | '\n')
 		| EscSequence
-		| '\'' '"'
+		| '\'"'
 	)*;
 fragment EscSequence:
 	'\\b'
 	| '\\t'
+	| '\\f'
+	| '\\r'
 	| '\\\''
 	| '\\\\';
 
 //=====EXPRESSIONS=====
 // ===Array===
-arrayId: IDENTIFIER expr_element;
+arrayElement: IDENTIFIER expr_element;
 expr_element: SB_LEFTSQUARE op_index SB_RIGHTSQUARE;
-// op_index: expr | expr SB_COMMA op_index;
-op_index: expr_arithmetic | expr_arithmetic SB_COMMA op_index;
+op_index: expr SB_COMMA op_index | expr;
+// op_index: expr_arithmetic | expr_arithmetic SB_COMMA op_index;
 // arrayValue: SB_LEFTSQUARE expr_arrayValue SB_RIGHTSQUARE; expr_arrayValue: | NUMBER (SB_COMMA
 // NUMBER)* | BOOL (SB_COMMA BOOL)* | STRING (SB_COMMA STRING)* | arrayValue (SB_COMMA arrayValue)*;
-// array_assign: (KW_NUMBER | KW_BOOL | KW_STRING) arrayId OP_ASSIGN arrayValue SB_NEWLINE;
+// array_assign: (KW_NUMBER | KW_BOOL | KW_STRING) arrayElement OP_ASSIGN arrayValue SB_NEWLINE;
 
 //Precedence: high to low
 op_unary_index: expr_element;
@@ -127,125 +140,153 @@ op_binary_string: OP_CONCAT;
 // op_binary_relational expr // = == != < > <= >= | (operand | SB_LEFTBRACKET expr SB_RIGHTBRACKET)
 // op_binary_string (operand | SB_LEFTBRACKET expr SB_RIGHTBRACKET) // ... | operand; operand:
 // IDENTIFIER | NUMBER | BOOL | STRING | stmt_func_call;
-expr:
-	SB_LEFTBRACKET expr SB_RIGHTBRACKET
-	| op_unary_index // index
-	| <assoc = right> OP_MINUS expr_arithmetic // sign
-	| <assoc = right> OP_NOT expr_logical // not
-	| expr_arithmetic // * / % + -
-	| expr_logical // and or
-	| expr_relational // = == != > < >= <=
-	| expr_string // ...
-	| operand;
-expr_arithmetic:
-	SB_LEFTBRACKET expr_arithmetic SB_RIGHTBRACKET
-	| <assoc = right> OP_MINUS expr_arithmetic
-	| expr_arithmetic op_binary_multiplying expr_arithmetic
-	| expr_arithmetic op_binary_adding expr_arithmetic
-	| operand_arithmetic;
-expr_logical:
-	SB_LEFTBRACKET expr_logical SB_RIGHTBRACKET
-	| <assoc = right> OP_NOT expr_logical
-	| expr_logical op_binary_logical expr_logical
-	| operand_logical;
-expr_relational:
-	SB_LEFTBRACKET expr_relational SB_RIGHTBRACKET
-	| (
-		SB_LEFTBRACKET expr_relational SB_RIGHTBRACKET
-		| operand_relational
-	) op_binary_relational (
-		SB_LEFTBRACKET expr_relational SB_RIGHTBRACKET
-		| operand_relational
-	)
-	| operand_relational;
-expr_string:
-	SB_LEFTBRACKET expr_string SB_RIGHTBRACKET
-	| (
-		SB_LEFTBRACKET expr_string SB_RIGHTBRACKET
-		| operand_string
-	) op_binary_string (
-		SB_LEFTBRACKET expr_string SB_RIGHTBRACKET
-		| operand_string
-	)
-	| operand_string;
-operand: IDENTIFIER | NUMBER | BOOL | STRING | stmt_func_call;
-operand_arithmetic: IDENTIFIER | NUMBER | stmt_func_call;
-operand_logical:
-	expr_relational
-	| IDENTIFIER
-	| BOOL
-	| stmt_func_call;
-operand_relational:
-	(expr_arithmetic | expr_string)
-	| IDENTIFIER
-	| NUMBER
-	| STRING
-	| stmt_func_call;
-operand_string: IDENTIFIER | STRING | stmt_func_call;
+
+// expr:
+// 	SB_LEFTBRACKET expr SB_RIGHTBRACKET
+// 	| op_unary_index // index
+// 	| <assoc = right> OP_MINUS expr_arithmetic // sign
+// 	| <assoc = right> OP_NOT expr_logical // not
+// 	| expr_arithmetic // * / % + -
+// 	| expr_logical // and or
+// 	| expr_relational // = == != > < >= <=
+// 	| expr_string // ...
+// 	| operand;
+// expr_arithmetic:
+// 	SB_LEFTBRACKET expr_arithmetic SB_RIGHTBRACKET
+// 	| <assoc = right> OP_MINUS expr_arithmetic
+// 	| expr_arithmetic op_binary_multiplying expr_arithmetic
+// 	| expr_arithmetic op_binary_adding expr_arithmetic
+// 	| operand_arithmetic;
+// expr_logical:
+// 	SB_LEFTBRACKET expr_logical SB_RIGHTBRACKET
+// 	| <assoc = right> OP_NOT expr_logical
+// 	| expr_logical op_binary_logical expr_logical
+// 	| operand_logical;
+// expr_relational:
+// 	SB_LEFTBRACKET expr_relational SB_RIGHTBRACKET
+// 	| (
+// 		SB_LEFTBRACKET expr_relational SB_RIGHTBRACKET
+// 		| operand_relational
+// 	) op_binary_relational (
+// 		SB_LEFTBRACKET expr_relational SB_RIGHTBRACKET
+// 		| operand_relational
+// 	)
+// 	| operand_relational;
+// expr_string:
+// 	SB_LEFTBRACKET expr_string SB_RIGHTBRACKET
+// 	| (
+// 		SB_LEFTBRACKET expr_string SB_RIGHTBRACKET
+// 		| operand_string
+// 	) op_binary_string (
+// 		SB_LEFTBRACKET expr_string SB_RIGHTBRACKET
+// 		| operand_string
+// 	)
+// 	| operand_string;
+// operand: IDENTIFIER | NUMBER | BOOL | STRING | stmt_func_call;
+// operand_arithmetic: IDENTIFIER | NUMBER | stmt_func_call;
+// operand_logical:
+// 	expr_relational
+// 	| IDENTIFIER
+// 	| BOOL
+// 	| stmt_func_call;
+// operand_relational:
+// 	(expr_arithmetic | expr_string)
+// 	| IDENTIFIER
+// 	| NUMBER
+// 	| STRING
+// 	| stmt_func_call;
+// operand_string: IDENTIFIER | STRING | stmt_func_call;
+
+expr: expr_string;
+expr_string: expr_relational op_binary_string expr_relational | expr_relational;
+expr_relational: expr_logical op_binary_relational expr_logical | expr_logical;
+expr_logical: expr_logical op_binary_logical expr_adding | expr_adding;
+expr_adding: expr_adding op_binary_adding expr_multiplying | expr_multiplying;
+expr_multiplying: expr_multiplying op_binary_multiplying expr_not | expr_not;
+expr_not: op_unary_logical expr_not | expr_sign;
+expr_sign: op_unary_sign expr_sign | expr_index;
+expr_index: expr_index op_unary_index | operand;
+operand: IDENTIFIER | NUMBER | BOOL | STRING | arrayValue | stmt_func_call | SB_LEFTBRACKET expr SB_RIGHTBRACKET;
 
 //=====VARIABLES=====
-stmt_var_declaration: (
-		KW_NUMBER
-		| KW_BOOL
-		| KW_STRING
-		| KW_VAR
-		| KW_DYNAMIC
-	) IDENTIFIER value_init?;
-stmt_array_declaration: (KW_NUMBER | KW_BOOL | KW_STRING) arrayId value_init?;
-value_init: OP_ASSIGN expr;
+kw_type_explicit: KW_NUMBER | KW_BOOL | KW_STRING;
+kw_type: kw_type_explicit | KW_VAR | KW_DYNAMIC;
+stmt_declaration: 
+		stmt_var_declaration newlineLst_1 
+		| stmt_array_declaration newlineLst_1 
+		| stmt_func_declaration newlineLst_1
+		;
+
+stmt_var_declaration: stmt_var_declaration_explicit | stmt_var_declaration_dynamic | stmt_var_declaration_var;
+stmt_var_declaration_explicit: kw_type_explicit IDENTIFIER value_init;
+stmt_var_declaration_dynamic: KW_DYNAMIC IDENTIFIER value_init;
+value_init: OP_ASSIGN expr | ;
+stmt_var_declaration_var: KW_VAR IDENTIFIER value_init_var;
+value_init_var: OP_ASSIGN expr;
+
+stmt_array_declaration: kw_type_explicit arrayId array_init;
+arrayId: IDENTIFIER SB_LEFTSQUARE arrayDim SB_RIGHTSQUARE;
+arrayDim: NUMBER SB_COMMA arrayDim | NUMBER;
+array_init: OP_ASSIGN arrayValue | ;
+arrayValue: SB_LEFTSQUARE exprLst SB_RIGHTSQUARE;
+exprLst: expr SB_COMMA exprLst | expr;
 
 stmt_func_declaration:
-	KW_FUNC IDENTIFIER SB_LEFTBRACKET paramLst? SB_RIGHTBRACKET SB_NEWLINE* func_body?;
-paramLst: (KW_NUMBER | KW_BOOL | KW_STRING) IDENTIFIER (
-		SB_COMMA (KW_NUMBER | KW_BOOL | KW_STRING) IDENTIFIER
-	)*;
-func_body: stmt_return | stmt_block;
+	KW_FUNC IDENTIFIER SB_LEFTBRACKET paramLst SB_RIGHTBRACKET newlineLst_0 func_body;	
+	// SB_NEWLINE* thì ko báo lỗi, nhưng newlineLst_0 báo lỗi??? case 1003
+paramLst: param paramLstTail | ;
+paramLstTail: SB_COMMA param paramLstTail | ;
+param: kw_type_explicit IDENTIFIER | kw_type_explicit arrayId;
+func_body: stmt_return | stmt_block | ;
 
 //=====STATEMENTS=====
-statement: (
-		stmt_var_declaration
-		| stmt_array_declaration
-		| stmt_func_declaration
-		| stmt_assignment
-		| stmt_if
-		| stmt_for
-		| stmt_break
-		| stmt_continue
-		| stmt_return
-		| stmt_func_call
-		| stmt_block
-	)? SB_NEWLINE+;
+statement_type:
+		stmt_var_declaration newlineLst_1 
+		| stmt_array_declaration newlineLst_1
+		| stmt_assignment newlineLst_1
+		| stmt_if							// No newline to prevent double newline from the stmt and its body
+		| stmt_for							// No newline to prevent double newline from the stmt and its body
+		| stmt_break newlineLst_1
+		| stmt_continue newlineLst_1
+		| stmt_return newlineLst_1
+		| stmt_func_call newlineLst_1
+		| stmt_block newlineLst_1
+		;
+statement: statement_type;
 
 //===Assignment===
 stmt_assignment: assignment_lhs value_init;
-assignment_lhs: IDENTIFIER | arrayId;
+assignment_lhs: IDENTIFIER | arrayElement;
 
 //===If statement===
 if_statement:
-	KW_IF SB_LEFTBRACKET (expr_logical | expr_relational) SB_RIGHTBRACKET SB_NEWLINE* statement;
+	KW_IF SB_LEFTBRACKET expr SB_RIGHTBRACKET newlineLst_0 statement;
 elif_statement:
-	KW_ELIF SB_LEFTBRACKET (expr_logical | expr_relational) SB_RIGHTBRACKET SB_NEWLINE* statement;
-else_statement: KW_ELSE SB_NEWLINE* statement;
+	KW_ELIF SB_LEFTBRACKET expr SB_RIGHTBRACKET newlineLst_0 statement;
+else_statement: KW_ELSE newlineLst_0 statement | ;
 stmt_if:
-	if_statement SB_NEWLINE* (elif_statement SB_NEWLINE*)* else_statement?;
+	if_statement newlineLst_0 elifLst else_statement;
+elifLst: elif_statement newlineLst_0 elifLst | ;
 
 //===For statement===
 stmt_for:
-	KW_FOR IDENTIFIER KW_UNTIL (expr_logical | expr_relational) KW_BY expr_arithmetic SB_NEWLINE*
+	KW_FOR IDENTIFIER KW_UNTIL expr KW_BY expr newlineLst_0
 		statement;
 
 stmt_break: KW_BREAK;
 stmt_continue: KW_CONTINUE;
-stmt_return: KW_RETURN expr?;
+stmt_return: KW_RETURN expr | KW_RETURN;
 
 //===Function call statement===
 stmt_func_call:
-	IDENTIFIER SB_LEFTBRACKET argLst? SB_RIGHTBRACKET;
-argLst: expr (SB_COMMA expr)*;
+	IDENTIFIER SB_LEFTBRACKET argLst SB_RIGHTBRACKET;
+argLst: expr argLstTail | ;
+argLstTail: SB_COMMA expr argLstTail | ;
 
 //===Block statement===
-stmt_block: KW_BEGIN SB_NEWLINE+ statement* KW_END;
+stmt_block: KW_BEGIN newlineLst_1 statementLst KW_END;
+statementLst: statement statementLst | ;
 
 ERROR_CHAR: . {raise ErrorToken(self.text)};
 UNCLOSE_STRING: '"' StringContent {self.text = self.text[1:]; raise UncloseString(self.text)};
-ILLEGAL_ESCAPE: '"' (~('"' | [\f\r\n\\]) | EscSequence | '\'' '"')* ('\\' ~[bfrnt'\\]) {self.text = self.text[1:]; raise IllegalEscape(self.text)};
+ILLEGAL_ESCAPE: '"' StringContent ('\\' ~[bfrnt'\\]) {self.text = self.text[1:]; raise IllegalEscape(self.text)};

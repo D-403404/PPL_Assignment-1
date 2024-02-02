@@ -56,6 +56,7 @@ ILLEGAL_ESCAPE=51
 '.'=7
 ','=8
 ';'=9
+'\n'=10
 'number'=11
 'bool'=12
 'string'=13
