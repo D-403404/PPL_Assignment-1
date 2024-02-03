@@ -10,12 +10,12 @@ Current problem:
 
     =====ASSIGNMENT 1=====
 DONE: 2, 3, 4, 5, 6, 7, python run.py test ParserSuite, python run.py test LexerSuite (LexerSuite got a result error, fixed)
-NEXT: fix stmt_var_declaration rule and expr rule
+NEXT: testcases for ParserSuite
 SKIP: 2, 8, 9
 TASKS: 
 - Fix lại expr associativity và precedence  => tạm
 - Fix tổng thể, sửa EBNF -> BNF (partially) => tạm
-- Viết rule cho newline list, optional và obligatory
+- Viết rule cho newline list, optional và obligatory => done
 
 
 NOTES:
@@ -53,6 +53,27 @@ VD:
     string 123xyz
     => lỗi 123 ở col 12 (trên VSCode)
     => Báo error ở col 11
+9. 3eee3 thì match 3,eee3; còn 3...3 thì match 3.,Error Token . vì:
+    3. là 1 valid token NUMBER, nên sẽ match 3., còn .. ko match đc => error
+    3e ko valid token NUMBER, nên ko match 3e mà chỉ match 3, xong eee3 thành token IDENTIFIER
+
+10.
+// Nếu để như vầy thì báo lỗi khác, tính col theo input raw bên ParserSuite
+// (đọc chuỗi newline từ input raw trc)
+program: newlineLst_0 declarationLst EOF;
+declarationLst: stmt_declaration declarationLst | stmt_declaration;
+
+// Nếu để như vầy thì báo lỗi khác, tính col theo file txt bên testcases
+// (đọc nguyên 1 cái input, sau đó render r mới báo lỗi)
+program: declarationLst EOF;
+declarationLst: newlineLst_0 stmt_declaration declarationLst | newlineLst_0 stmt_declaration;
+
+11. \n khi báo lỗi sẽ xuống hàng mới. Còn \r trong input sẽ render xuống hàng như \n, nhưng trong báo lỗi sẽ chỉ chiếm 1 col chứ ko đc xem là 1 hàng mới
+    Also, 1 dấu tab trên bàn phím sẽ tính nhiều col (tùy vào vị trí dừng, max 4 col 1 khoảng), còn dấu \t = 1 col
+VD: 
+    \n\\n        => Error on line 2 col 0: \\n
+    \r\\n        => Error on line 1 col 5: \\n (col 5+1-1)
+    \t\r\\n      => Error on line 1 col 6: \\n (col 5+2-1)
 
 
 ASK:
@@ -77,9 +98,13 @@ Testcase design:
     number: 11-20
     random tokens: 21-30
     string: 31-50
-    integrated: 51-100
+    integrated: 51-75
+    statement: 76-100
 
-    Flagged:
+    Flagged: 98
     Unflagged: 44, 45
     
 2. ParserSuite: array, statement, var declaration, array declaration, func declaration, expr
+
+* lexer: 100 case, mỗi case sai 1 error
+  parser: 100 case, mỗi case có thể successful hoặc bắt 1 lỗi

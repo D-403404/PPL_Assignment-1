@@ -10,17 +10,8 @@ options {
 	language = Python3;
 }
 
-// Nếu để như vầy thì báo lỗi khác, tính col theo input raw bên ParserSuite
-// (đọc chuỗi newline từ input raw trc)
-// program: newlineLst_0 declarationLst EOF;
-// declarationLst: stmt_declaration declarationLst | stmt_declaration;
-
-// Nếu để như vầy thì báo lỗi khác, tính col theo file txt bên testcases
-// (đọc nguyên 1 cái input, sau đó render r mới báo lỗi)
 program: declarationLst EOF;
 declarationLst: newlineLst_0 stmt_declaration declarationLst | newlineLst_0 stmt_declaration;
-
-// IDENTIFIER: [a-z] [a-z0-9]*;
 
 newlineLst_0: SB_NEWLINE newlineLst_0 | ;
 newlineLst_1: SB_NEWLINE newlineLst_1 | SB_NEWLINE;
@@ -41,7 +32,7 @@ SB_COMMA: ',';
 // SB_NEWLINE: '\r'? '\n' | '\r' {self.text = self.text.replace('\r\n','\n')};
 // SB_NEWLINE:   '\n' | '\r\n'  | '\\n' {self.text = self.text.replace('\n','\\n').replace('\r\n','\\r\\n')};
 // SB_CR: ('\r') {self.text = self.text.replace('\r','\\r')};
-SB_NEWLINE: ('\r' '\n' | '\r' | '\n' | '\\n') {self.text = self.text.replace('\r\n','\n')};
+SB_NEWLINE: ('\r' '\n' | '\r' | '\n' | '\\n') {self.text = self.text.replace('\r\n','\n').replace('\r','\n')};
 SB_CR: '\\r';
 
 //=====KEYWORDS=====

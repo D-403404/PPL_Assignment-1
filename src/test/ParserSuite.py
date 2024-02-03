@@ -310,10 +310,64 @@ end
 """
         self.assertTrue(TestParser.test(input, expect, 1026))
     
-    def test_1027(self): # col 42 or 43?
+    def test_1027(self):
         """test 1027"""
         input = """
             var engineergaming123 <- 123e2xyz
 """
         expect = """Error on line 2 col 42: xyz"""
         self.assertTrue(TestParser.test(input, expect, 1027))
+    
+    def test_1028(self):
+        """test 1028"""
+        input = """
+            var engineergaming123<-e2xyz
+            func foo() begin\nend
+"""
+        expect = """successful"""
+        self.assertTrue(TestParser.test(input, expect, 1028))
+    
+    def test_1029(self):
+        """test 1029"""
+        input = """
+            var engineergaming123<-e2xyz
+            func foo() begin\n\n\n\n\r\n\r\r\rend
+"""
+        expect = """successful"""
+        self.assertTrue(TestParser.test(input, expect, 1029))
+    
+    def test_1030(self):
+        """test 1030"""
+        input = """
+            var engineergaming123<-e2xyz
+            func foo() begin\n\n\n\n
+
+    \t\r\\rend
+"""
+        expect = """Error on line 9 col 6: \\r"""
+        self.assertTrue(TestParser.test(input, expect, 1030))
+
+    def test_1031(self):
+        """test 1031"""
+        input = """
+        func isPrime(number x)
+
+        func main()
+            begin
+                number x <- readNumber()
+                if isPrime(x) printString("Yes")
+                else printString("No")
+            end
+        func isPrime(number x)
+            begin
+                if (x <= 1) return false
+                var i <- 2
+                for i until i > x / 2 by 1
+                begin
+                    if (x % i = 0) return false
+                end
+                return true
+            end
+        """
+        expect = "Error on line 7 col 19: isPrime"
+        self.assertTrue(TestParser.test(input,expect,1031))
