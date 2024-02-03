@@ -1,1 +1,1 @@
-'isn''t',<EOF>
+Unclosed String: 'isn''t'"

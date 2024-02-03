@@ -1,1 +1,2 @@
-Unclosed String: It's 
+\',
+,Unclosed String:  

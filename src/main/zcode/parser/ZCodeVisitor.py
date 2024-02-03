@@ -164,18 +164,13 @@ class ZCodeVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by ZCodeParser#value_init.
-    def visitValue_init(self, ctx:ZCodeParser.Value_initContext):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by ZCodeParser#stmt_var_declaration_var.
     def visitStmt_var_declaration_var(self, ctx:ZCodeParser.Stmt_var_declaration_varContext):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by ZCodeParser#value_init_var.
-    def visitValue_init_var(self, ctx:ZCodeParser.Value_init_varContext):
+    # Visit a parse tree produced by ZCodeParser#value_init.
+    def visitValue_init(self, ctx:ZCodeParser.Value_initContext):
         return self.visitChildren(ctx)
 
 

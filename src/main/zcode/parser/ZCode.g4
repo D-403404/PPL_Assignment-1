@@ -26,19 +26,23 @@ newlineLst_0: SB_NEWLINE newlineLst_0 | ;
 newlineLst_1: SB_NEWLINE newlineLst_1 | SB_NEWLINE;
 
 // COMMENT: '##' .*? (SB_NEWLINE | EOF) -> skip;
-COMMENT: '##' ~('\n')* -> skip;
-WS: [ \t\b\f\r]+ -> skip; // skip spaces, tabs, backspaces, form feeds, carriage returns
-WS2: (' ' | '\\t' | '\\b' | '\\f' | '\\r')+ -> skip;
+COMMENT: '##' ~('\r' | '\n')* -> skip;
+WS: [ \t\b\f]+ -> skip; // skip spaces, tabs, backspaces, form feeds
+WS2: (' ' | '\\t' | '\\b' | '\\f')+ -> skip;
 
 //=====SYMBOLS=====
 SB_LEFTBRACKET: '(';
 SB_RIGHTBRACKET: ')';
 SB_LEFTSQUARE: '[';
 SB_RIGHTSQUARE: ']';
-SB_DOT: '.';
+// SB_DOT: '.';
 SB_COMMA: ',';
-SB_SEMICOLON: ';';
-SB_NEWLINE: '\n' | '\\n';
+// SB_SEMICOLON: ';';
+// SB_NEWLINE: '\r'? '\n' | '\r' {self.text = self.text.replace('\r\n','\n')};
+// SB_NEWLINE:   '\n' | '\r\n'  | '\\n' {self.text = self.text.replace('\n','\\n').replace('\r\n','\\r\\n')};
+// SB_CR: ('\r') {self.text = self.text.replace('\r','\\r')};
+SB_NEWLINE: ('\r' '\n' | '\r' | '\n' | '\\n') {self.text = self.text.replace('\r\n','\n')};
+SB_CR: '\\r';
 
 //=====KEYWORDS=====
 fragment KW_TRUE: 'true';
@@ -93,9 +97,9 @@ fragment DecPart: '.' Digit*;
 fragment ExpPart: [Ee] [+-]? Digit+;
 BOOL: KW_TRUE | KW_FALSE;
 STRING:
-	'"' StringContent '"' {self.text = self.text[1:len(self.text)-1]};
+	'"' StringContent '"' {self.text = self.text[1:-1]};
 fragment StringContent: (
-		~('"' | '\\' | '\n')
+		~('"' | '\\' | '\n' | '\r')
 		| EscSequence
 		| '\'"'
 	)*;
@@ -109,7 +113,7 @@ fragment EscSequence:
 
 //=====EXPRESSIONS=====
 // ===Array===
-arrayElement: IDENTIFIER expr_element;
+arrayElement: IDENTIFIER expr_element | stmt_func_call expr_element;
 expr_element: SB_LEFTSQUARE op_index SB_RIGHTSQUARE;
 op_index: expr SB_COMMA op_index | expr;
 // op_index: expr_arithmetic | expr_arithmetic SB_COMMA op_index;
@@ -118,7 +122,7 @@ op_index: expr SB_COMMA op_index | expr;
 // array_assign: (KW_NUMBER | KW_BOOL | KW_STRING) arrayElement OP_ASSIGN arrayValue SB_NEWLINE;
 
 //Precedence: high to low
-op_unary_index: expr_element;
+op_unary_index: arrayElement;
 op_unary_sign: OP_MINUS;
 op_unary_logical: OP_NOT;
 op_binary_multiplying: OP_MULT | OP_DIV | OP_MOD;
@@ -134,69 +138,6 @@ op_binary_relational:
 	| OP_MOREOREQUAL;
 op_binary_string: OP_CONCAT;
 
-// expr: SB_LEFTBRACKET expr SB_RIGHTBRACKET | op_unary_index // index | <assoc = right> OP_MINUS
-// expr // sign | <assoc = right> OP_NOT expr // not | expr op_binary_multiplying expr // * / % |
-// expr op_binary_adding expr // + - | expr op_binary_logical expr // and or | expr
-// op_binary_relational expr // = == != < > <= >= | (operand | SB_LEFTBRACKET expr SB_RIGHTBRACKET)
-// op_binary_string (operand | SB_LEFTBRACKET expr SB_RIGHTBRACKET) // ... | operand; operand:
-// IDENTIFIER | NUMBER | BOOL | STRING | stmt_func_call;
-
-// expr:
-// 	SB_LEFTBRACKET expr SB_RIGHTBRACKET
-// 	| op_unary_index // index
-// 	| <assoc = right> OP_MINUS expr_arithmetic // sign
-// 	| <assoc = right> OP_NOT expr_logical // not
-// 	| expr_arithmetic // * / % + -
-// 	| expr_logical // and or
-// 	| expr_relational // = == != > < >= <=
-// 	| expr_string // ...
-// 	| operand;
-// expr_arithmetic:
-// 	SB_LEFTBRACKET expr_arithmetic SB_RIGHTBRACKET
-// 	| <assoc = right> OP_MINUS expr_arithmetic
-// 	| expr_arithmetic op_binary_multiplying expr_arithmetic
-// 	| expr_arithmetic op_binary_adding expr_arithmetic
-// 	| operand_arithmetic;
-// expr_logical:
-// 	SB_LEFTBRACKET expr_logical SB_RIGHTBRACKET
-// 	| <assoc = right> OP_NOT expr_logical
-// 	| expr_logical op_binary_logical expr_logical
-// 	| operand_logical;
-// expr_relational:
-// 	SB_LEFTBRACKET expr_relational SB_RIGHTBRACKET
-// 	| (
-// 		SB_LEFTBRACKET expr_relational SB_RIGHTBRACKET
-// 		| operand_relational
-// 	) op_binary_relational (
-// 		SB_LEFTBRACKET expr_relational SB_RIGHTBRACKET
-// 		| operand_relational
-// 	)
-// 	| operand_relational;
-// expr_string:
-// 	SB_LEFTBRACKET expr_string SB_RIGHTBRACKET
-// 	| (
-// 		SB_LEFTBRACKET expr_string SB_RIGHTBRACKET
-// 		| operand_string
-// 	) op_binary_string (
-// 		SB_LEFTBRACKET expr_string SB_RIGHTBRACKET
-// 		| operand_string
-// 	)
-// 	| operand_string;
-// operand: IDENTIFIER | NUMBER | BOOL | STRING | stmt_func_call;
-// operand_arithmetic: IDENTIFIER | NUMBER | stmt_func_call;
-// operand_logical:
-// 	expr_relational
-// 	| IDENTIFIER
-// 	| BOOL
-// 	| stmt_func_call;
-// operand_relational:
-// 	(expr_arithmetic | expr_string)
-// 	| IDENTIFIER
-// 	| NUMBER
-// 	| STRING
-// 	| stmt_func_call;
-// operand_string: IDENTIFIER | STRING | stmt_func_call;
-
 expr: expr_string;
 expr_string: expr_relational op_binary_string expr_relational | expr_relational;
 expr_relational: expr_logical op_binary_relational expr_logical | expr_logical;
@@ -205,7 +146,7 @@ expr_adding: expr_adding op_binary_adding expr_multiplying | expr_multiplying;
 expr_multiplying: expr_multiplying op_binary_multiplying expr_not | expr_not;
 expr_not: op_unary_logical expr_not | expr_sign;
 expr_sign: op_unary_sign expr_sign | expr_index;
-expr_index: expr_index op_unary_index | operand;
+expr_index: op_unary_index | operand;
 operand: IDENTIFIER | NUMBER | BOOL | STRING | arrayValue | stmt_func_call | SB_LEFTBRACKET expr SB_RIGHTBRACKET;
 
 //=====VARIABLES=====
@@ -218,16 +159,15 @@ stmt_declaration:
 		;
 
 stmt_var_declaration: stmt_var_declaration_explicit | stmt_var_declaration_dynamic | stmt_var_declaration_var;
-stmt_var_declaration_explicit: kw_type_explicit IDENTIFIER value_init;
-stmt_var_declaration_dynamic: KW_DYNAMIC IDENTIFIER value_init;
-value_init: OP_ASSIGN expr | ;
-stmt_var_declaration_var: KW_VAR IDENTIFIER value_init_var;
-value_init_var: OP_ASSIGN expr;
+stmt_var_declaration_explicit: kw_type_explicit IDENTIFIER value_init | kw_type_explicit IDENTIFIER;
+stmt_var_declaration_dynamic: KW_DYNAMIC IDENTIFIER value_init | KW_DYNAMIC IDENTIFIER;
+stmt_var_declaration_var: KW_VAR IDENTIFIER value_init;
+value_init: OP_ASSIGN expr;
 
-stmt_array_declaration: kw_type_explicit arrayId array_init;
+stmt_array_declaration: kw_type_explicit arrayId array_init | kw_type_explicit arrayId;
 arrayId: IDENTIFIER SB_LEFTSQUARE arrayDim SB_RIGHTSQUARE;
 arrayDim: NUMBER SB_COMMA arrayDim | NUMBER;
-array_init: OP_ASSIGN arrayValue | ;
+array_init: OP_ASSIGN arrayValue;
 arrayValue: SB_LEFTSQUARE exprLst SB_RIGHTSQUARE;
 exprLst: expr SB_COMMA exprLst | expr;
 
@@ -288,5 +228,6 @@ stmt_block: KW_BEGIN newlineLst_1 statementLst KW_END;
 statementLst: statement statementLst | ;
 
 ERROR_CHAR: . {raise ErrorToken(self.text)};
-UNCLOSE_STRING: '"' StringContent {self.text = self.text[1:]; raise UncloseString(self.text)};
+UNCLOSE_STRING: '"' StringContent ('\r' | '\n' | '\\n' | EOF) {self.text = self.text[1:].replace('\r','').replace('\n','').replace('\\n',''); raise UncloseString(self.text)};
+// UNCLOSE_STRING: ( '"' ('\'"' | '\\' [btnfr'\\] | ~[\r\t\n\\"] )* ) {self.text = self.text[1:]; raise UncloseString(self.text)};
 ILLEGAL_ESCAPE: '"' StringContent ('\\' ~[bfrnt'\\]) {self.text = self.text[1:]; raise IllegalEscape(self.text)};

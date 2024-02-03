@@ -120,7 +120,7 @@ end
         input = """
 func foo()
     begin
-        number arr[3, foo(5)*4, brr[6]]
+        number arr[3, foo(5)*4,6]
     end
         """
         expect = "Error on line 4 col 22: foo"
@@ -134,7 +134,7 @@ func foo()
         number arr[3, 3,1] <- [b[9,20][0][c[25]] + 5, foo(6), "abc"]
     end
         """
-        expect = "successful"
+        expect = "Error on line 4 col 38: ["
         self.assertTrue(TestParser.test(input,expect,1009))
 
     def test_1010(self):
@@ -154,10 +154,10 @@ func foo()
 func foo()
     begin
         number __abc[2]
-        var bca <- 8[3] + ag[2]
+        var bca <- 81[3] + ag[2]
     end
         """
-        expect = "successful"
+        expect = "Error on line 5 col 21: ["
         self.assertTrue(TestParser.test(input,expect,1011))
     
     def test_1012(self):
@@ -222,7 +222,7 @@ end
         input = """
 var a
         """
-        expect = "Error on line 2 col 6: \n"
+        expect = "Error on line 2 col 5: \n"
         self.assertTrue(TestParser.test(input,expect,1017))
 
     def test_1018(self):
@@ -230,7 +230,7 @@ var a
         input = """
 string a <- expr()[2] + [1,"kfc",E][1,4,[]]
         """
-        expect = "Error on line 2 col 41: ]"
+        expect = "Error on line 2 col 35: ["
         self.assertTrue(TestParser.test(input,expect,1018))
 
     def test_1019(self):
@@ -247,7 +247,7 @@ dynamic a1
 var a2
 
 """
-        expect = """Error on line 10 col 7: 
+        expect = """Error on line 10 col 6: 
 """
         self.assertTrue(TestParser.test(input, expect, 1019))
     
@@ -277,3 +277,43 @@ var a2
 """
         expect = """Error on line 3 col 0: <EOF>"""
         self.assertTrue(TestParser.test(input, expect, 1023))
+
+    def test_1024(self):
+        """test 1024"""
+        input = """
+
+func foo()
+begin
+askdjas <- 123.e-3
+if (abc) 
+number foo() <- 8910
+end
+"""
+        expect = """Error on line 7 col 10: ("""
+        self.assertTrue(TestParser.test(input, expect, 1024))
+
+    def test_1025(self):
+        """test 1025"""
+        input = """
+            var engineergaming123
+"""
+        expect = """Error on line 2 col 33: 
+"""
+        self.assertTrue(TestParser.test(input, expect, 1025))
+    
+    def test_1026(self):
+        """test 1026"""
+        input = """
+            var _123engineergaming123
+"""
+        expect = """Error on line 2 col 37: 
+"""
+        self.assertTrue(TestParser.test(input, expect, 1026))
+    
+    def test_1027(self): # col 42 or 43?
+        """test 1027"""
+        input = """
+            var engineergaming123 <- 123e2xyz
+"""
+        expect = """Error on line 2 col 42: xyz"""
+        self.assertTrue(TestParser.test(input, expect, 1027))
