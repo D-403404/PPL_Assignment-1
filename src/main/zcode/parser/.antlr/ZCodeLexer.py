@@ -245,7 +245,7 @@ class ZCodeLexer(Lexer):
                   "STRING", "StringContent", "EscSequence", "ERROR_CHAR", 
                   "UNCLOSE_STRING", "ILLEGAL_ESCAPE" ]
 
-    grammarFileName = "ZCode copy 3.g4"
+    grammarFileName = "ZCode.g4"
 
     def __init__(self, input=None, output:TextIO = sys.stdout):
         super().__init__(input, output)
