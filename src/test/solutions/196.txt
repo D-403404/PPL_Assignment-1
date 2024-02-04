@@ -1,1 +1,0 @@
-if,(,areDivisors,(,num1,,,num2,),),writeString,(,Yes,),<EOF>

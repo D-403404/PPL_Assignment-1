@@ -1,3 +1,0 @@
- check##"test \i '"'
-
- chibaku "tensei" 

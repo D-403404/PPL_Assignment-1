@@ -16,7 +16,6 @@ declarationLst: newlineLst_0 stmt_declaration declarationLst | newlineLst_0 stmt
 newlineLst_0: SB_NEWLINE newlineLst_0 | ;
 newlineLst_1: SB_NEWLINE newlineLst_1 | SB_NEWLINE;
 
-// COMMENT: '##' .*? (SB_NEWLINE | EOF) -> skip;
 COMMENT: '##' ~('\r' | '\n')* -> skip;
 WS: [ \t\b\f]+ -> skip; // skip spaces, tabs, backspaces, form feeds
 WS2: (' ' | '\\t' | '\\b' | '\\f')+ -> skip;
@@ -26,12 +25,7 @@ SB_LEFTBRACKET: '(';
 SB_RIGHTBRACKET: ')';
 SB_LEFTSQUARE: '[';
 SB_RIGHTSQUARE: ']';
-// SB_DOT: '.';
 SB_COMMA: ',';
-// SB_SEMICOLON: ';';
-// SB_NEWLINE: '\r'? '\n' | '\r' {self.text = self.text.replace('\r\n','\n')};
-// SB_NEWLINE:   '\n' | '\r\n'  | '\\n' {self.text = self.text.replace('\n','\\n').replace('\r\n','\\r\\n')};
-// SB_CR: ('\r') {self.text = self.text.replace('\r','\\r')};
 SB_NEWLINE: ('\r' '\n' | '\r' | '\n' | '\\n') {self.text = self.text.replace('\r\n','\n').replace('\r','\n')};
 SB_CR: '\\r';
 
@@ -75,10 +69,6 @@ OP_NOT: 'not';
 OP_AND: 'and';
 OP_OR: 'or';
 
-// //=====ADDITIONAL I/O FUNCTIONS===== FN_READNUM: 'readNumber'; FN_WRITENUM: 'writeNumber';
-// FN_READBOOL: 'readBool'; FN_WRITEBOOL: 'write'; FN_READSTRING: 'readString'; FN_WRITESTRING:
-// 'writeString';
-
 //=====LITERALS=====
 IDENTIFIER: [A-Za-z_] [A-Za-z_0-9]*;
 NUMBER: IntPart DecPart? ExpPart?;
@@ -107,10 +97,6 @@ fragment EscSequence:
 arrayElement: IDENTIFIER expr_element | stmt_func_call expr_element;
 expr_element: SB_LEFTSQUARE op_index SB_RIGHTSQUARE;
 op_index: expr SB_COMMA op_index | expr;
-// op_index: expr_arithmetic | expr_arithmetic SB_COMMA op_index;
-// arrayValue: SB_LEFTSQUARE expr_arrayValue SB_RIGHTSQUARE; expr_arrayValue: | NUMBER (SB_COMMA
-// NUMBER)* | BOOL (SB_COMMA BOOL)* | STRING (SB_COMMA STRING)* | arrayValue (SB_COMMA arrayValue)*;
-// array_assign: (KW_NUMBER | KW_BOOL | KW_STRING) arrayElement OP_ASSIGN arrayValue SB_NEWLINE;
 
 //Precedence: high to low
 op_unary_index: arrayElement;
@@ -164,7 +150,6 @@ exprLst: expr SB_COMMA exprLst | expr;
 
 stmt_func_declaration:
 	KW_FUNC IDENTIFIER SB_LEFTBRACKET paramLst SB_RIGHTBRACKET newlineLst_0 func_body;	
-	// SB_NEWLINE* thì ko báo lỗi, nhưng newlineLst_0 báo lỗi??? case 1003
 paramLst: param paramLstTail | ;
 paramLstTail: SB_COMMA param paramLstTail | ;
 param: kw_type_explicit IDENTIFIER | kw_type_explicit arrayId;
@@ -220,5 +205,4 @@ statementLst: statement statementLst | ;
 
 ERROR_CHAR: . {raise ErrorToken(self.text)};
 UNCLOSE_STRING: '"' StringContent ('\r' | '\n' | '\\n' | EOF) {self.text = self.text[1:].replace('\r','').replace('\n','').replace('\\n',''); raise UncloseString(self.text)};
-// UNCLOSE_STRING: ( '"' ('\'"' | '\\' [btnfr'\\] | ~[\r\t\n\\"] )* ) {self.text = self.text[1:]; raise UncloseString(self.text)};
 ILLEGAL_ESCAPE: '"' StringContent ('\\' ~[bfrnt'\\]) {self.text = self.text[1:]; raise IllegalEscape(self.text)};
