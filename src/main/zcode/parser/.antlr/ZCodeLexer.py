@@ -1,4 +1,4 @@
-# Generated from d://Code scripts//Principles of Programming Languages//PPL_AS1//assignment1//src//main//zcode//parser//ZCode.g4 by ANTLR 4.13.1
+# Generated from d://Code scripts//Principles of Programming Languages//PPL_AS1//assignment1//src//main//zcode//parser//ZCode copy 3.g4 by ANTLR 4.13.1
 from antlr4 import *
 from io import StringIO
 import sys
@@ -260,7 +260,7 @@ class ZCodeLexer(Lexer):
                   "DecPart", "ExpPart", "BOOL", "STRING", "StringContent", 
                   "EscSequence", "ERROR_CHAR", "UNCLOSE_STRING", "ILLEGAL_ESCAPE" ]
 
-    grammarFileName = "ZCode.g4"
+    grammarFileName = "ZCode copy 3.g4"
 
     def __init__(self, input=None, output:TextIO = sys.stdout):
         super().__init__(input, output)
