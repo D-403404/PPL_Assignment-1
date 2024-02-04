@@ -1,4 +1,0 @@
-func main ()    begin
-        number x1 = 5 
-   end
-        

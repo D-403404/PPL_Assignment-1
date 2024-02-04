@@ -1,7 +1,0 @@
-
-func main(string a <- "abc") 
-    begin 
-        break ## 12345678
-    end
-func main(number a) 
-        

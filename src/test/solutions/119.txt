@@ -1,0 +1,1 @@
+For some real reason, test comment in string ##iamsory? ,<EOF>

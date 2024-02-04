@@ -1,3 +1,0 @@
-func main ()
-        number x1 = 5
-        

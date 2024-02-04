@@ -2,6 +2,22 @@ import unittest
 from TestUtils import TestLexer
 
 class LexerSuite(unittest.TestCase):
+      
+    def test_simple_string(self):
+        """test simple string"""
+        self.assertTrue(TestLexer.test("\"'Yanxi Palace - 2018'\"","Unclosed String: 'Yanxi Palace - 2018'\"",101))
+
+    def test_complex_string(self):
+        """test complex string"""
+        self.assertTrue(TestLexer.test("\"'isn''t'\"","Unclosed String: 'isn''t'\"",102))
+
+    def test_0(self):
+        """test 0"""
+        input = """ "He asked me: \'"Where is John?\'"" """
+        expect = "He asked me: '\"Where is John?'\",<EOF>"
+        self.assertTrue(TestLexer.test(input,expect,0))
+
+#====================================================================
     def test_1(self):
         """test 1"""
         input = "the_quick_brown_fox\b\f\n\n\n#"
@@ -237,7 +253,7 @@ not and or = <-
     
     def test_28(self):
         """test 28"""
-        input = """ \\ """
+        input = """ \ """
         expect = """Error Token \\"""
         self.assertTrue(TestLexer.test(input,expect,28))
     
@@ -275,8 +291,8 @@ not and or = <-
     
     def test_35(self):
         """test 35"""
-        input = """ "jsjfajsfkhjakjkakfwe90o9i288r_==+:;sd;'"S:kdlau\\###$%^\t ebv " """
-        expect = """Illegal Escape In String: jsjfajsfkhjakjkakfwe90o9i288r_==+:;sd;'"S:kdlau\\#"""
+        input = """ "jsjfajsfkhjakjkakfwe90o9i288r_==+:;sd;'"S:kdlau\###$%^\t \ebv " """
+        expect = """Illegal Escape In String: jsjfajsfkhjakjkakfwe90o9i288r_==+:;sd;'"S:kdlau\#"""
         self.assertTrue(TestLexer.test(input,expect,35))
     
     def test_36(self):
@@ -311,8 +327,8 @@ not and or = <-
 
     def test_41(self):
         """test 41"""
-        input = """ "It's \\t meeee! 1.0e-12 .5" " """
-        expect = "It's \\t meeee! 1.0e-12 .5,Unclosed String:  "
+        input = """ "It's \\t meeee!" """
+        expect = "It's \\t meeee!,<EOF>"
         self.assertTrue(TestLexer.test(input,expect,41))
 
     def test_42(self):
@@ -329,8 +345,8 @@ not and or = <-
 
     def test_44(self):
         """test 44"""
-        input = """ "It's \t\\z\b meeee!" """
-        expect = "Illegal Escape In String: It's \t\\z"
+        input = """ "It's \t\z\b meeee!" """
+        expect = "Illegal Escape In String: It's \t\z"
         self.assertTrue(TestLexer.test(input,expect,44))
 
     def test_45(self):
@@ -514,13 +530,13 @@ not and or = <-
     
     def test_72(self):
         """test 72"""
-        input = """15.Efdss__1abc*<>><=="*-+++$##><>"{// " \\ """
+        input = """15.Efdss__1abc*<>><=="*-+++$##><>"{// " \ """
         expect = """15.,Efdss__1abc,*,<,>,>,<=,=,*-+++$##><>,Error Token {"""
         self.assertTrue(TestLexer.test(input,expect,72))
     
     def test_73(self):
         """test 73"""
-        input = """ "test1" \ninput\\m##\\h\\m "test2" """
+        input = """ "test1" \ninput\m##\h\m "test2" """
         expect = """test1,\n,input,Error Token \\"""
         self.assertTrue(TestLexer.test(input,expect,73))
     

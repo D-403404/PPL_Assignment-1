@@ -105,8 +105,6 @@ Testcase design:
     Unflagged: 44, 45
     
 2. ParserSuite: array, statement, var declaration, array declaration, func declaration, expr
-    Flagged: 1059
 
 * lexer: 100 case, mỗi case sai 1 error
   parser: 100 case, mỗi case có thể successful hoặc bắt 1 lỗi
-  parser testcase nên lexically correct

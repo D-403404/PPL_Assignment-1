@@ -1,3 +1,0 @@
-
-dynamic r <- a - b * a/b
-        

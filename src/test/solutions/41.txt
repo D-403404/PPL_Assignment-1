@@ -1,1 +1,1 @@
-It's \t meeee! 1.0e-12 .5,Unclosed String:  
+It's \t meeee!,<EOF>

@@ -1,0 +1,1 @@
+ if number a == 9, ha ha ha string "with12" " 
