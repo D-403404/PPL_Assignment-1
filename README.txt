@@ -110,3 +110,5 @@ Testcase design:
 * lexer: 100 case, mỗi case sai 1 error
   parser: 100 case, mỗi case có thể successful hoặc bắt 1 lỗi
   parser testcase nên lexically correct
+
+*** Tác động nội dung của file ZCode.g4 rồi save, thì nội dung của file ZCodeLexer.interp, ZCodeLexer.py, ZCodeLexer.tokens tronng src/main/zcode/parser/.antlr cx sẽ thay đổi (dù cho có copy y chang nd của ZCode.g4 và paste lại) 
